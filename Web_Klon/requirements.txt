@@ -1,0 +1,6 @@
+Flask==2.2.5
+pythainlp==5.0.4
+panphon==0.20.0
+python-crfsuite==0.9.10
+torch==2.3.1
+numpy==1.26.4
