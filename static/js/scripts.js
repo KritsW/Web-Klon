@@ -43,7 +43,7 @@ async function checkRhyme() {
         });
         const data = await response.json();
         hideLoading();
-        rhymeMessagesDiv.innerHTML = '<h2>คำที่ไม่สัมผัส:</h2><ul>' + data.messages.map(message => `<li>${message}</li>`).join('') + '</ul>';
+        rhymeMessagesDiv.innerHTML = '<h2>รายละเอียด:</h2><ul>' + data.messages.map(message => `<li>${message}</li>`).join('') + '</ul>';
         rhymeMessagesDiv.innerHTML += `<p>Word Count: ${data.word_count} words</p>`;
         rhymeMessagesDiv.innerHTML += `<p>Processing time: ${data.processing_time.toFixed(2)} seconds</p>`;
         showRhymeSuggestions(data.display_words, data.lists_status);  // แสดงคำแนะนำที่สัมผัส
