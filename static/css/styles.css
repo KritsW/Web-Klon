@@ -166,3 +166,39 @@ body, html {
     color:black;
     padding: 5px;
 }
+
+
+#suggestions {
+    border: 1px solid #ccc;
+    max-height: 150px;
+    overflow-y: auto;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    margin-top: 5px;
+}
+
+#suggestions li {
+    padding: 8px;
+    cursor: pointer;
+}
+
+#suggestions li.selected {
+    background-color: #ddd;
+}
+
+.highlight {
+    color: blue;
+}
+
+.selected {
+    background-color: #ddd;
+}
+
+.highlight {
+    color: blue;
+}
+
+.non-highlight {
+    color: black;
+}

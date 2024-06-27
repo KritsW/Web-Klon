@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-
+<script src="{{ url_for('static', filename='js/scripts.js') }}" defer></script>
 </head>
 <body>
 
@@ -47,16 +47,16 @@
   <main class="center">
   <form id="check-rhyme-form">
     <label for="text"><h4>กรุณาใส่ข้อความ:</h4></label>
-    <textarea id="text" name="text" placeholder=" แล้วสอนว่าอย่าไว้ใจมนุษย์ มันแสนสุดลึกล้ำเหลือกำหนด
-ถึงเถาวัลย์พันเกี่ยวที่เลี้ยวลด ก็ไม่คดเหมือนหนึ่งในน้ำใจคน..."></textarea>
+    <textarea id="text" name="text" placeholder="แล้วสอนว่าอย่าไว้ใจมนุษย์ มันแสนสุดลึกล้ำเหลือกำหนด
+ถึงเถาวัลย์พันเกี่ยวที่เลี้ยวลด ก็ไม่คดเหมือนหนึ่งในน้ำใจคน..." oninput="handleInput(event)"></textarea>
+    <ul id="suggestions"></ul>
+    <div id="loading-container">
+      <div id="loading-bar"></div>
+      <div id="loading-text">Processing...<div class="spinner"></div></div>
+    </div>
+    <div id="rhyme-messages"></div>
+    <div id="syllable-lists"></div>
   </form>
-  <div id="loading-container" style="margin-bottom: 16px;">
-    <div id="loading-bar"></div>
-    <div id="loading-text" >Processing...<div class="spinner"></div></div>
-  </div>
-  <div id="syllable-lists"> </div>
-  <div id="rhyme-messages"></div>
-
   </main>
 
   <h1 class="w3-center" style="">ตัวอย่าง</h1>
@@ -128,6 +128,5 @@
   </div>
   <p>Powered by <a href="" title="W3.CSS" target="_blank" class="w3-hover-text-blue">OctaPoemAI</a></p>
 </footer>
-<script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
 </body>
 </html>

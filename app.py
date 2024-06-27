@@ -7,10 +7,15 @@ from pythainlp.tokenize import word_tokenize, syllable_tokenize
 from pythainlp.transliterate import pronunciate
 from pythainlp.khavee import KhaveeVerifier
 from pythainlp.soundex.sound import word_approximation
-from pythainlp.util import rhyme
+from pythainlp.util import rhyme, Trie
+from pythainlp.corpus import thai_words
 
 app = Flask(__name__)
 kv = KhaveeVerifier()
+
+# Load Thai words into a trie for fast autocomplete
+words = list(thai_words())
+trie = Trie(words)
 
 def remove_sara(word):
     thai_vowels = 'ะาำิีึืุูเแโใไัา็่้๊๋์'
@@ -78,21 +83,25 @@ def check_sumpus(word1, word2):
 def index():
     return render_template('index.html')
 
+@app.route('/autocomplete', methods=['GET'])
+def autocomplete():
+    query = request.args.get('query', '')
+    if query:
+        tokens = word_tokenize(query)
+        last_token = tokens[-1]
+        suggestions = [word for word in trie if word.startswith(last_token)][:5]
+        suggestions = [query + suggestion[len(last_token):] for suggestion in suggestions]
+    else:
+        suggestions = []
+    return jsonify(suggestions)
+
 @app.route('/check_rhyme', methods=['POST'])
 def check_rhyme():
     start_time = time.time()
     text = request.form['text']
 
-    # Tokenize syllables and sentences
-    syllables0 = syllable_tokenize(text)
-    print(syllables0)
-
-    sentences = text.split()
-    syllable_lists = [syllable_tokenize(sentence) for sentence in sentences]
-    print(syllable_lists)
-
-    combined_syllables = [''.join(syllable_list) for syllable_list in syllable_lists]
-    print(combined_syllables)
+    conv0 = syllable_tokenize(text)
+    print(f"conv0 = {conv0}")
 
     conv = word_tokenize(text, engine="newmm")
     while conv and conv[0].strip() == '':
@@ -122,15 +131,14 @@ def check_rhyme():
     for index in spaces_indices:
         lists.append(syllables[start:index])
         start = index + 1
-    print(lists)
+    print(f"แยก lists: {lists}")
 
-    # Count words excluding spaces
     word_count = len([word for word in syllables if word.strip()])
     print(f"จำนวนคำที่ไม่รวมช่องว่าง: {word_count}")
 
     messages = []
-    lists_status = ['green'] * len(lists)  # Initialize all lists as green
-    display_words = []  # List to store the display words based on the logic
+    lists_status = ['green'] * len(lists)
+    display_words = []
 
     for group_start in range(0, len(lists), 8):
         for i in range(group_start, min(group_start + 8, len(lists))):
@@ -264,7 +272,6 @@ def check_rhyme():
         'messages': messages,
         'lists_status': lists_status,
         'display_words': display_words,
-        'syllable_lists': syllable_lists,
         'processing_time': elapsed_time,
         'word_count': word_count
     })

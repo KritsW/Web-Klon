@@ -6,15 +6,31 @@ const loadingBar = document.getElementById('loading-bar');
 const loadingText = document.getElementById('loading-text');
 const rhymeMessagesDiv = document.getElementById('rhyme-messages');
 const syllableListsDiv = document.getElementById('syllable-lists');
+const suggestionsList = document.getElementById('suggestions');
+let selectedSuggestionIndex = -1;
 
 document.addEventListener('DOMContentLoaded', function() {
-    textarea.addEventListener('input', function() {
+    textarea.addEventListener('input', function(event) {
         clearTimeout(typingTimer);
-        typingTimer = setTimeout(fetchSuggestions, typingDelay);
+        fetchSuggestions(event);  // เรียกใช้ autocomplete ทันทีเมื่อผู้ใช้พิมพ์
+        typingTimer = setTimeout(() => {
+            checkRhyme(event);  // แล้วค่อยตั้งเวลาเรียก check_rhyme หลังจากหยุดพิมพ์ 2 วินาที
+        }, typingDelay);
     });
 });
 
-async function fetchSuggestions() {
+async function fetchSuggestions(event) {
+    const query = event.target.value;
+    if (query.length > 0) {
+        const response = await fetch(`/autocomplete?query=${query}`);
+        const suggestions = await response.json();
+        showSuggestions(suggestions);
+    } else {
+        suggestionsList.innerHTML = '';
+    }
+}
+
+async function checkRhyme() {
     const text = textarea.value;
     if (text.length > 0) {
         showLoading();
@@ -27,10 +43,10 @@ async function fetchSuggestions() {
         });
         const data = await response.json();
         hideLoading();
-        rhymeMessagesDiv.innerHTML = '<h2>รายละเอียด:</h2><ul>' + data.messages.map(message => `<li>${message}</li>`).join('') + '</ul>';
+        rhymeMessagesDiv.innerHTML = '<h2>คำที่ไม่สัมผัส:</h2><ul>' + data.messages.map(message => `<li>${message}</li>`).join('') + '</ul>';
         rhymeMessagesDiv.innerHTML += `<p>Word Count: ${data.word_count} words</p>`;
         rhymeMessagesDiv.innerHTML += `<p>Processing time: ${data.processing_time.toFixed(2)} seconds</p>`;
-
+        showRhymeSuggestions(data.display_words, data.lists_status);  // แสดงคำแนะนำที่สัมผัส
         syllableListsDiv.innerHTML = data.display_words.map((wordInfo, index) => {
             const [word_pair, rhymes] = wordInfo;
             const status = rhymes ? 'highlight-green' : 'highlight-red';
@@ -38,8 +54,51 @@ async function fetchSuggestions() {
         }).join('');
     } else {
         rhymeMessagesDiv.innerHTML = '';
-        syllableListsDiv.innerHTML = '';
+        suggestionsList.innerHTML = '';
     }
+}
+
+function showSuggestions(suggestions) {
+    suggestionsList.innerHTML = '';
+
+    suggestions.forEach((suggestion, index) => {
+        const listItem = document.createElement('li');
+        listItem.innerHTML = highlightMatchingText(suggestion);
+        listItem.addEventListener('click', async () => {
+            addSuggestionToInput(suggestion);
+        });
+        if (index === selectedSuggestionIndex) {
+            listItem.classList.add('selected');
+        }
+        suggestionsList.appendChild(listItem);
+    });
+}
+
+function highlightMatchingText(suggestion) {
+    const query = textarea.value;
+    const matchingPart = suggestion.slice(0, query.length);
+    const remainingPart = suggestion.slice(query.length);
+    const highlightedText = `<span class="highlight">${matchingPart}</span>${remainingPart}`;
+    return highlightedText;
+}
+
+async function addSuggestionToInput(suggestion) {
+    let currentText = textarea.value.trim();
+    const tokens = currentText.split(' ');
+
+    // ใส่คำแนะนำเพียงคำเดียว ไม่รวมคำที่พิมพ์อยู่ก่อนหน้า
+    textarea.value = suggestion;
+    textarea.focus();
+
+    fetchSuggestions({ target: textarea });
+}
+
+function showRhymeSuggestions(suggestions, listsStatus) {
+    syllableListsDiv.innerHTML = suggestions.map((wordInfo, index) => {
+        const [word_pair, rhymes] = wordInfo;
+        const status = listsStatus[index] === 'red' ? 'highlight-red' : 'highlight-green';
+        return `<div class="${status}">${word_pair}</div>`;
+    }).join('');
 }
 
 function showLoading() {
