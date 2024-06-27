@@ -9,6 +9,7 @@ from pythainlp.khavee import KhaveeVerifier
 from pythainlp.soundex.sound import word_approximation
 from pythainlp.util import rhyme, Trie
 from pythainlp.corpus import thai_words
+import requests
 
 app = Flask(__name__)
 kv = KhaveeVerifier()
@@ -16,6 +17,10 @@ kv = KhaveeVerifier()
 # Load Thai words into a trie for fast autocomplete
 words = list(thai_words())
 trie = Trie(words)
+
+# Add your Google API key here
+GOOGLE_API_KEY = "AIzaSyD-D1hV-CnCU99zbtSvnTBFsqiqU4Gyw8g"
+os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
 
 def remove_sara(word):
     thai_vowels = 'ะาำิีึืุูเแโใไัา็่้๊๋์'
@@ -79,6 +84,34 @@ def check_sumpus(word1, word2):
     return kv.check_sara(check_phayanchana(word1)[1]) == kv.check_sara(check_phayanchana(word2)[1]) or \
         check_phayanchana(word1)[0] == check_phayanchana(word2)[0]
 
+def call_google_gemini_api(query):
+    google_api_url = f"https://generativelanguage.googleapis.com/v1beta2/models/text-bison-001:generateText?key={GOOGLE_API_KEY}"
+    google_data = {
+        "prompt": {
+            "text": query
+        },
+        "maxOutputTokens": 10,
+        "temperature": 0.7,
+        "topP": 0.95,
+        "topK": 50
+    }
+    google_headers = {
+        'Content-Type': 'application/json'
+    }
+
+    for attempt in range(3):  # Retry up to 3 times
+        google_response = requests.post(google_api_url, headers=google_headers, json=google_data)
+        if google_response.status_code == 200:
+            google_suggestions = google_response.json().get('candidates', [])
+            return [suggestion['output'] for suggestion in google_suggestions]
+        elif google_response.status_code == 429:
+            print(f"Rate limited. Waiting before retrying... (Attempt {attempt + 1})")
+            time.sleep(2 ** attempt)  # Exponential backoff
+        else:
+            print(f"Failed to get Google API response. Status code: {google_response.status_code}")
+            break
+    return []
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -86,13 +119,21 @@ def index():
 @app.route('/autocomplete', methods=['GET'])
 def autocomplete():
     query = request.args.get('query', '')
+    suggestions = []
+
     if query:
+        # Tokenize the input query and find suggestions
         tokens = word_tokenize(query)
         last_token = tokens[-1]
-        suggestions = [word for word in trie if word.startswith(last_token)][:5]
-        suggestions = [query + suggestion[len(last_token):] for suggestion in suggestions]
-    else:
-        suggestions = []
+
+        # Perform prefix search using the trie
+        trie_suggestions = [word for word in trie if word.startswith(last_token)][:5]  # Limit to top 5 suggestions
+        suggestions.extend([query + suggestion[len(last_token):] for suggestion in trie_suggestions])
+
+        # Use Google Gemini API to get suggestions
+        google_suggestions = call_google_gemini_api(query)
+        suggestions.extend(google_suggestions)
+
     return jsonify(suggestions)
 
 @app.route('/check_rhyme', methods=['POST'])
